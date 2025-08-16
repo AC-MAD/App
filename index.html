@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Today?</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+   
+
+    <style>
+        :root {
+            --background-color: #0a0a0a;
+            --text-color: #f0f0f0;
+            --card-background: #1a1a1a;
+            --category-color: #888888;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --accept-glow: rgba(50, 205, 50, 0.6);
+            --reject-glow: rgba(255, 69, 0, 0.6);
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100%;
+            padding: 2.5vh 5vw;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        h1 {
+            font-size: clamp(1.75rem, 8vw, 2.5rem);
+            font-weight: 800;
+            margin: 2.5vh 0 5vh 0;
+            text-align: center;
+            color: var(--text-color);
+        }
+        em
+        {
+            font-style: italic;
+        }
+        #streak-flame {
+            position: absolute;
+            top: 3.5vh;
+            right: 5vw;
+            width: clamp(30px, 10vw, 50px);
+            height: clamp(30px, 10vw, 50px);
+            transition: filter 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+
+        #streak-flame svg {
+            width: 100%;
+            height: 100%;
+            fill: #f0f0f0;
+            transition: fill 0.5s ease-in-out;
+        }
+        
+        /* Flame Intensity Levels */
+        #streak-flame.level-0 { filter: drop-shadow(0 0 1px #444); transform: scale(0.9); }
+        #streak-flame.level-0 svg { fill: #666; }
+        #streak-flame.level-1 { filter: drop-shadow(0 0 5px #ff8c00); transform: scale(1); }
+        #streak-flame.level-1 svg { fill: #ff8c00; animation: flicker 3s infinite linear; }
+        #streak-flame.level-2 { filter: drop-shadow(0 0 10px #ff4500) drop-shadow(0 0 2px #ff8c00); transform: scale(1.05); }
+        #streak-flame.level-2 svg { fill: #ff4500; animation: flicker 2s infinite linear; }
+        #streak-flame.level-3 { filter: drop-shadow(0 0 15px #ff0000) drop-shadow(0 0 5px #ff4500); transform: scale(1.1); }
+        #streak-flame.level-3 svg { fill: #ff0000; animation: flicker 1.5s infinite linear; }
+        #streak-flame.level-4 { filter: drop-shadow(0 0 25px #ff0000) drop-shadow(0 0 10px #ff4500) drop-shadow(0 0 2px #ffff00); transform: scale(1.15); }
+        #streak-flame.level-4 svg { fill: #ff1493; animation: flicker 1s infinite linear; }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        #card-stack {
+            position: relative;
+            width: 90vw;
+            height: 65vh;
+            max-width: 400px;
+            max-height: 600px;
+        }
+
+        .task-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: var(--card-background);
+            border-radius: 25px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            will-change: transform, opacity;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        }
+        
+        .task-card.exiting {
+            transition: transform 0.5s ease-in, opacity 0.5s ease-in;
+        }
+
+        .task-card .task-text {
+            font-size: clamp(1.5rem, 7vw, 2.25rem);
+            font-weight: 700;
+            text-align: center;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        .task-card .category-text {
+            font-size: clamp(0.9rem, 4vw, 1.1rem);
+            font-weight: 400;
+            color: var(--category-color);
+            margin-top: 15px;
+        }
+        
+        .swipe-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 25px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .swipe-glow.accept {
+            background: radial-gradient(circle at 90% 50%, var(--accept-glow) 0%, transparent 70%);
+        }
+
+        .swipe-glow.reject {
+            background: radial-gradient(circle at 10% 50%, var(--reject-glow) 0%, transparent 70%);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <h1><em>What to do now?</em></h1>
+        <div id="streak-flame" class="level-0">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C12 2 4.29167 11.3333 4.29167 15.4167C4.29167 19.5 7.79167 22 12 22C16.2083 22 19.7083 19.5 19.7083 15.4167C19.7083 11.3333 12 2 12 2Z" />
+            </svg>
+        </div>
+        <div id="card-stack"></div>
+    </div>
+
+    <script>
+        const tasks = [
+//  { task: "Do 3 sets of push-ups to your limit", category: "Body & Health" },
+ // { task: "Write down 3 things you are grateful for", category: "Reflection" },
+  //{ task: "Drink a glass of water", category: "Body & Health" },
+//  { task: "Meditate for 5 minutes", category: "Mind & Calm" },
+//  { task: "Clean your room for 5 minutes", category: "Productivity" },
+//  { task: "Read 2 pages of a book", category: "Mind & Knowledge" },
+ // { task: "Do 20 squats", category: "Body & Health" }, 
+  { task: "Send a kind message to a friend", category: "Network & Mind" },
+//  { task: "Write a positive affirmation", category: "Reflection" },
+  { task: "Do 15 burpees", category: "Body & Health" },
+  { task: "Listen to 1 surah with full focus", category: "Mind & Calm" },
+  { task: "Plan tomorrow’s top 3 tasks", category: "Productivity" },
+  { task: "Learn 1 new word in a foreign language", category: "Mind & Knowledge" },
+  { task: "Sketch something simple", category: "Creativity" },
+  { task: "Go for a 10-minute walk", category: "Body & Health" },
+  { task: "Call a loved one and ask how they are", category: "Network & Mind" },
+  { task: "Hold a plank for 1 minute", category: "Body & Health" },
+  { task: "Note 1 lesson you learned today", category: "Reflection" },
+  { task: "Organize your desk", category: "Productivity" },
+  { task: "Write down 1 new idea", category: "Creativity" },
+  { task: "Pray 2 Rakat", category: "Mind & Calm" },
+  { task: "Do 15 sit-ups", category: "Body & Health" },
+  { task: "Throw away 1 unnecessary item", category: "Productivity" },
+  { task: "Journal 2 sentences about how you feel right now", category: "Reflection" },
+  { task: "Eat a piece of fruit", category: "Body & Health" },
+  //{ task: "Listen to calming instrumental music", category: "Mind & Calm" },
+  { task: "Reply to 1 important message/email", category: "Productivity" },
+  { task: "Stand up and stretch your whole body", category: "Body & Health" },
+  { task: "Write a 2-line poem", category: "Creativity" },
+  { task: "Ask someone how their day was", category: "Network & Mind" },
+  { task: "Do 20 jumping jacks", category: "Body & Health" },
+  { task: "Reflect on 1 mistake and how to improve", category: "Reflection" },
+  { task: "Memorize 1 Quran verse or hadith", category: "Mind & Knowledge" },
+  { task: "Delete 5 unnecessary files from your phone", category: "Productivity" },
+  { task: "Brainstorm 3 ideas to improve your life", category: "Creativity" },
+  { task: "Give a genuine compliment to someone", category: "Network & Mind" },
+  { task: "Do progressive muscle relaxation for 3 minutes", category: "Mind & Calm" },
+  { task: "Read an article on a new topic", category: "Mind & Knowledge" },
+//  { task: "Do 15 lunges per leg", category: "Body & Health" },
+  { task: "Reconnect with a friend you haven’t spoken to in a while", category: "Network & Mind" },
+  { task: "Write down your top priority for today", category: "Reflection" },
+  { task: "Take a creative photo with your phone", category: "Creativity" },
+  { task: "Watch a short educational video", category: "Mind & Knowledge" },
+  { task: "Make your bed", category: "Productivity" },
+  { task: "Sit in silence for 2 minutes", category: "Mind & Calm" },
+  //{ task: "Hum a melody or sing for 1 minute", category: "Creativity" },
+  { task: "Write down 1 thing you did well today", category: "Reflection" },
+  { task: "Stretch your back for 3 minutes", category: "Body & Health" },
+  { task: "Learn 1 new fact", category: "Mind & Knowledge" },
+  { task: "Sort one folder or drawer", category: "Productivity" },
+  { task: "Close your eyes and focus on your breath", category: "Mind & Calm" },
+  { task: "Invent a small story in 3 sentences", category: "Creativity" }
+];
+
+
+        const cardStack = document.getElementById('card-stack');
+        const streakFlame = document.getElementById('streak-flame');
+
+        let currentTaskIndex = 0;
+        let streakCount = 0;
+
+        function createCard(taskData) {
+            const card = document.createElement('div');
+            card.className = 'task-card';
+
+            const taskText = document.createElement('p');
+            taskText.className = 'task-text';
+            taskText.textContent = taskData.task;
+
+            const categoryText = document.createElement('p');
+            categoryText.className = 'category-text';
+            categoryText.textContent = taskData.category;
+            
+            const acceptGlow = document.createElement('div');
+            acceptGlow.className = 'swipe-glow accept';
+
+            const rejectGlow = document.createElement('div');
+            rejectGlow.className = 'swipe-glow reject';
+
+            card.appendChild(acceptGlow);
+            card.appendChild(rejectGlow);
+            card.appendChild(taskText);
+            card.appendChild(categoryText);
+            
+            addSwipeListeners(card);
+
+            return card;
+        }
+        
+        function addNextCard() {
+            if (currentTaskIndex >= tasks.length) {
+                currentTaskIndex = 0;
+            }
+            const nextCard = createCard(tasks[currentTaskIndex]);
+            cardStack.appendChild(nextCard);
+            currentTaskIndex++;
+
+            // Preload the card after that
+           const preloadIndex = currentTaskIndex % tasks.length;
+            const preloadCard = createCard(tasks[preloadIndex]);
+           preloadCard.style.transform = 'scale(0.95) translateY(20px)';
+            preloadCard.style.zIndex = '-1';
+            cardStack.insertBefore(preloadCard, nextCard);
+        }
+
+        function updateStreakFlame() {
+            let level = 0;
+            if (streakCount > 0 && streakCount <= 2) level = 1;
+            else if (streakCount > 2 && streakCount <= 5) level = 2;
+            else if (streakCount > 5 && streakCount <= 10) level = 3;
+            else if (streakCount > 10) level = 4;
+            
+            streakFlame.className = `level-${level}`;
+        }
+
+        function addSwipeListeners(card) {
+            let startX = 0;
+            let startY = 0;
+            let isDragging = false;
+            const threshold = window.innerWidth / 4;
+
+            function onStart(e) {
+                startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+                startY = e.type.includes('mouse') ? e.pageY : e.touches[0].pageY;
+                isDragging = true;
+                card.style.transition = 'none';
+                card.style.cursor = 'grabbing';
+            }
+
+            function onMove(e) {
+                if (!isDragging) return;
+                
+                const currentX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+                const diffX = currentX - startX;
+                const rotate = diffX * 0.1;
+                
+                card.style.transform = `translateX(${diffX}px) rotate(${rotate}deg)`;
+
+                const opacity = Math.min(Math.abs(diffX) / threshold, 1);
+                if (diffX > 0) {
+                    card.querySelector('.accept').style.opacity = opacity;
+                    card.querySelector('.reject').style.opacity = 0;
+                } else {
+                    card.querySelector('.reject').style.opacity = opacity;
+                    card.querySelector('.accept').style.opacity = 0;
+                }
+            }
+
+            function onEnd(e) {
+                if (!isDragging) return;
+                isDragging = false;
+                
+                const finalX = e.type.includes('mouse') ? e.pageX : e.changedTouches[0].pageX;
+                const diffX = finalX - startX;
+                
+                card.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+                card.querySelector('.swipe-glow').style.transition = 'opacity 0.3s ease';
+                card.style.cursor = 'grab';
+
+                if (Math.abs(diffX) > threshold) {
+                    const direction = diffX > 0 ? 1 : -1;
+                    card.classList.add('exiting');
+                    card.style.transform = `translateX(${direction * window.innerWidth}px) rotate(${direction * 20}deg)`;
+                    card.style.opacity = '0';
+                    
+                    if (direction === 1) {
+                        streakCount++;
+                    } else {
+                        // You could reset the streak here if desired
+                        // streakCount = 0;
+                    }
+                    updateStreakFlame();
+
+                    setTimeout(() => {
+                        card.remove();
+                        const nextCard = cardStack.querySelector('.task-card');
+                        if (nextCard) {
+                            nextCard.style.transform = 'none';
+                            nextCard.style.zIndex = '0';
+                            addNextCard();
+                        }
+                    }, 500);
+
+                } else {
+                    card.style.transform = 'translateX(0) rotate(0)';
+                    card.querySelector('.accept').style.opacity = 0;
+                    card.querySelector('.reject').style.opacity = 0;
+                }
+            }
+            
+            card.addEventListener('mousedown', onStart);
+            card.addEventListener('mousemove', onMove);
+            card.addEventListener('mouseup', onEnd);
+            card.addEventListener('mouseleave', onEnd);
+
+            card.addEventListener('touchstart', onStart, { passive: true });
+            card.addEventListener('touchmove', onMove, { passive: true });
+            card.addEventListener('touchend', onEnd);
+        }
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            addNextCard();
+            updateStreakFlame();
+        });
+
+    </script>
+</body>
+</html>
